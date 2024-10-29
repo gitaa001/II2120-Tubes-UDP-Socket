@@ -3,7 +3,7 @@ import threading
 import csv
 import os
 
-# Function to load users from CSV
+# Load user dari CSV
 def load_users(filename='users.csv'):
     users = {}
     if os.path.exists(filename):
@@ -15,127 +15,107 @@ def load_users(filename='users.csv'):
                 users[username] = password
     return users
 
-# Function to save new user to CSV
+# Simpan user baru ke CSV
 def save_user(username, password, filename='users.csv'):
     with open(filename, mode='a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([username, password])
 
-# Function for user login with validation
-def login(users):
+# Kirim pesan ke server
+def send_message():
     while True:
-        username = input("Masukkan username: ").strip()
-        password = input("Masukkan password: ").strip()
-        
+        try:
+            data = input()  # Input pesan dari user
+            if data.lower() == "logout":
+                logout()
+                break
+
+            message = f"{data}"  
+            client_socket.sendto(message.encode(), (server_ip, server_port))
+        except KeyboardInterrupt:
+            logout()
+            break
+
+def receive_message():
+    while True:
+        try:
+            data, _ = client_socket.recvfrom(1024)
+            message = data.decode()
+            print(message)  # Langsung print pesan yang diterima
+        except Exception as e:
+            print(f"LOG: Error - {e}")
+            break
+            
+def logout():
+    logout_message = f"LOGOUT:{username}"
+    client_socket.sendto(logout_message.encode(), (server_ip, server_port))
+    print("Keluar dari chat.")
+    client_socket.close()
+    os._exit(0)
+
+server_ip = input("Masukkan IP Server: ").strip()
+server_port = int(input("Masukkan Port Server: ").strip())
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+users = load_users()
+while True:
+    print("\n======== MENU =========")
+    print("1. Login\n2. Register\n3. Exit")
+    action = input(">> Pilih opsi: ").strip()
+
+    if action == '1':
+        username = input("Username: ").strip()
+        password = input("Password: ").strip()
+
         if not username or not password:
             print("Username dan password tidak boleh kosong. Coba lagi.")
             continue
 
-        if username in users and users[username] == password:
-            print("Login berhasil!")
-            return username
-        else:
+        if username not in users or users[username] != password:
             print("Username atau password salah. Coba lagi.")
-
-# Function for user registration with validation
-def register(users):
-    while True:
-        username = input("Masukkan username baru: ").strip()
-        if not username:
-            print("Username tidak boleh kosong. Coba lagi.")
             continue
-        
-        if username in users:
-            print("Username sudah terdaftar. Coba username lain.")
-        else:
-            password = input("Masukkan password baru: ").strip()
-            if not password:
-                print("Password tidak boleh kosong. Coba lagi.")
-                continue
-            
-            save_user(username, password)
-            print("Registrasi berhasil!")
-            return username
 
-# Input server IP and port with validation
-while True:
-    IpAddress = input("Masukkan IP Address: ").strip()
-    if not IpAddress:
-        print("IP Address tidak boleh kosong. Coba lagi.")
-        continue
+        # Kirim pesan login ke server
+        login_message = f"LOGIN:{username}"
+        client_socket.sendto(login_message.encode(), (server_ip, server_port))
 
-    portServer = input("Masukkan Port Number: ").strip()
-    if not portServer.isdigit() or int(portServer) <= 0:
-        print("Port Number tidak boleh kosong dan harus berupa angka positif. Coba lagi.")
-        continue
-    
-    clientPort = int(input("Masukkan clientPort: ").strip())
-    if clientPort <= 0:
-        print("Client port harus berupa angka positif. Coba lagi.")
-        continue
-
-    portServer = int(portServer)
-    break
-
-# Create a client socket
-clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-clientSocket.bind(('0.0.0.0', clientPort))  # Bind to all interfaces
-
-# Load existing users from CSV
-users = load_users()
-
-# Choose between login or registration
-while True:
-    action = input("Apa yang kamu mau?\n1. Login\n2. Register\n\nMasukkan angka: ")
-    if action == '1':
-        username = login(users)
-        # Attempt to login
-        login_message = f"{username}|dummy"
-        clientSocket.sendto(login_message.encode(), (IpAddress, portServer))
-        data, _ = clientSocket.recvfrom(1024)
-        response = data.decode()
-        if response == "Username already logged in.":
-            print("Login gagal: Username sudah digunakan.")
-            continue
-        break
-    elif action == '2':
-        username = register(users)
-        break
-    else:
-        print("Pilihan tidak valid. Silakan pilih 1 atau 2.")
-
-# Function to send messages to the server
-def sendMessage():
-    while True:
-        data = input("You: ")  # User input
-        message = f"{username}|{data}"  # Send username and message
-        clientSocket.sendto(message.encode(), (IpAddress, portServer))  # Send message to server
-
-# Function to receive messages from the server
-def receiveMessage():
-    while True:
-        try:
-            data, addr = clientSocket.recvfrom(1024)
-            message = data.decode()
-            sender, chatMessage = message.split("|", 1)
-
-            # Check if the sender is the user themselves
-            if sender == username:
-                print(f"You: {chatMessage}")
-            else:
-                print(f"{sender}: {chatMessage}")
-
-        except Exception as e:
-            print(f"LOG: Error saat menerima pesan: {e}")
+        response, _ = client_socket.recvfrom(1024)
+        if response.decode() == "Login berhasil.":
+            print("Berhasil login! Mulai mengirim pesan.")
             break
+        else:
+            print(response.decode())
 
-# Start threads for sending and receiving messages
-sendThread = threading.Thread(target=sendMessage)
-receiveThread = threading.Thread(target=receiveMessage)
+    elif action == '2':
+        while True:
+            username = input("Username baru: ").strip()
+            password = input("Password baru: ").strip()
 
-sendThread.start()
-receiveThread.start()
+            if not username or not password:
+                print("Username dan password tidak boleh kosong.")
+                continue
 
-sendThread.join()
-receiveThread.join()
+            if username in users:
+                print("Username sudah terdaftar. Gunakan username lain.")
+            else:
+                save_user(username, password)
+                print("Registrasi berhasil! Silakan login.")
+                users[username] = password
+                break
 
+    elif action == '3':
+        print("Terima kasih sudah mencoba layanan kami. Sampai jumpa!")
+        exit()
+
+    else:
+        print("Pilihan tidak valid.")
+
+send_thread = threading.Thread(target=send_message)
+receive_thread = threading.Thread(target=receive_message)
+
+send_thread.start()
+receive_thread.start()
+
+send_thread.join()
+receive_thread.join()
