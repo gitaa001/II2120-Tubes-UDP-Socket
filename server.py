@@ -1,35 +1,58 @@
+
 import socket
-import csv
 
 server_password = "ampunbang"
-# Input IP and port
-IpAddress = input("Masukkan IP Address: ")
-portServer = int(input("Masukkan Port Number: "))
+clients = {}  # Key: clientAddress, Value: username
+active_users = []  # Array active useer
 
-# Create server socket
+def broadcast_message(data):
+    for client in clients.keys():  # Kirim pesan ke semua klien, termasuk pengirim
+        serverSocket.sendto(data.encode(), client)
+
+IpAddress = input("Masukkan IP Address: ").strip()
+portServer = int(input("Masukkan Port Number: ").strip())
+
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-serverSocket.bind((IpAddress, portServer))  # Bind IP and port
-
-# Initialize clients dictionary
-clients = {}
+serverSocket.bind((IpAddress, portServer)) 
 
 print(f"Chatroom server running on {IpAddress}:{portServer}...")
 
+# Terima pesan dari klien
 while True:
     data, clientAddress = serverSocket.recvfrom(1024)
-    message = data.decode()  # Decode message from bytes to string
-    username, pesan = message.split("|", 1)
+    message = data.decode()
 
-    # Register new client
-    if clientAddress not in clients:
-        clients[clientAddress] = username
-        print(f"New client joined: {username} ({clientAddress})")
+    # Proses login dengan autentikasi password server
+    if message.startswith("AUTH:"):
+        _, password = message.split(":", 1)
+        if password == server_password:
+            serverSocket.sendto("AUTH_SUCCESS".encode(), clientAddress)
+        else:
+            serverSocket.sendto("AUTH_FAILED".encode(), clientAddress)
+            continue
 
-    # Broadcast message to all clients
-    for client in clients.keys():
-        if client != clientAddress:  # Don't send the message back to the sender
-            serverSocket.sendto(data, client)
+    elif message.startswith("LOGIN:"):
+        _, username = message.split(":", 1)
 
-    # Log the received message
-    print(f"LOG: Received message from {username} ({clientAddress}): {pesan}")
+        if username in active_users:
+            serverSocket.sendto("ERROR: Username sudah digunakan.".encode(), clientAddress)
+        else:
+            clients[clientAddress] = username
+            active_users.append(username)
+            serverSocket.sendto("Login berhasil.".encode(), clientAddress)
+            print(f"New client joined: {username} ({clientAddress})")
+            
+    elif message.startswith("LOGOUT:"):
+        _, username = message.split(":", 1)
 
+        if clientAddress in clients:
+            print(f"{username} has left the chat. ({clientAddress})")
+            del clients[clientAddress]
+            active_users.remove(username)
+
+    elif message and clientAddress in clients:
+        username = clients.get(clientAddress, "Unknown")
+        broadcast_message(f"{username}: {message}")
+
+        # Log pesan di server
+        print(f"LOG: {username} ({clientAddress}): {message}")
