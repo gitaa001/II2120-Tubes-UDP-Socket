@@ -3,8 +3,9 @@ import socket
 
 server_password = "ampunbang"
 clients = {}  # Key: clientAddress, Value: username
-active_users = []  # Array active useer
+active_users = []  # Array active user
 
+# ---------------- KIRIM PESAN KE CLIENT ---------------------
 def broadcast_message(data):
     for client in clients.keys():  # Kirim pesan ke semua klien, termasuk pengirim
         serverSocket.sendto(data.encode(), client)
@@ -17,7 +18,7 @@ serverSocket.bind((IpAddress, portServer))
 
 print(f"Chatroom server running on {IpAddress}:{portServer}...")
 
-# Terima pesan dari klien
+# -------------- TERIMA PESAN DARI CLIENT ------------------
 while True:
     data, clientAddress = serverSocket.recvfrom(1024)
     message = data.decode()
@@ -31,18 +32,18 @@ while True:
             serverSocket.sendto("AUTH_FAILED".encode(), clientAddress)
             continue
 
-    elif message.startswith("LOGIN:"):
+    elif message.startswith("LOGIN:"): # CLIENT LOGIN
         _, username = message.split(":", 1)
 
-        if username in active_users:
-            serverSocket.sendto("ERROR: Username sudah digunakan.".encode(), clientAddress)
+        if username in active_users: # Cek agar username hanya bisa aktif oleh satu orang
+            serverSocket.sendto("ERROR: Anda sudah login.".encode(), clientAddress)
         else:
             clients[clientAddress] = username
             active_users.append(username)
             serverSocket.sendto("Login berhasil.".encode(), clientAddress)
             print(f"New client joined: {username} ({clientAddress})")
-            
-    elif message.startswith("LOGOUT:"):
+
+    elif message.startswith("LOGOUT:"): # CLIENT LOGOUT
         _, username = message.split(":", 1)
 
         if clientAddress in clients:
@@ -50,7 +51,7 @@ while True:
             del clients[clientAddress]
             active_users.remove(username)
 
-    elif message and clientAddress in clients:
+    elif message and clientAddress in clients: # Teruskan pesan
         username = clients.get(clientAddress, "Unknown")
         broadcast_message(f"{username}: {message}")
 
