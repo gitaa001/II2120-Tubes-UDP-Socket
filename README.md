@@ -10,7 +10,7 @@ Khairunnisa Azizah (18223117)
 Anggita Najmi Layali (18223122) 
 
 # Features
-Program ini berisi fungsi Server dan Client yang menjalankan fungsi masing-masing, di mana peran client dapat diduplikasi (lebih dari satu client dalam server). Tersedia pula users.csv untuk menampung data sebagai alat autentikasi sehingga tiap client yang ingin terhubung dengan server harus memiliki akun dengan username yang unik.
+Program ini berisi fungsi Server dan Client yang menjalankan fungsi masing-masing, di mana peran client dapat diduplikasi (lebih dari satu client dalam server). Tersedia pula users.csv untuk menampung dan alat autentikasi data client.
 
 # How to Run
 1. Cek ipaddress dengan melakukan "ipconfig" pada terminal.
