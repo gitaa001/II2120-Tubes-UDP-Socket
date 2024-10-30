@@ -1,8 +1,8 @@
-# Tugas UDP Socket Programming - II2120 Jaringan Komputer 2024
+# UDP-Based Roomchat - II2120 Jaringan Komputer 2024
 > Dosen: Hamonangan Situmorang, S.T. M.T.
 
 # About
-UDP-Based Roomchat ini adalah program jaringan komunikasi sederhana yang dibuat berbasis UDP protocol. Dibuat dalam rangka memenuhi "Tugas UDP Socket Programming".
+UDP-Based Roomchat ini adalah program jaringan komunikasi sederhana yang dibuat berbasis UDP protocol. Dibuat dalam rangka memenuhi "Tugas UDP Socket Programming - II2120 Jaringan Komputer".
 
 # Contributors
 Khairunnisa Azizah (18223117)
