@@ -1,5 +1,4 @@
-# II2120 - Jaringan Komputer 2024
-> Tugas UDP Socket Programming - II2120 Jaringan Komputer 2024
+# Tugas UDP Socket Programming - II2120 Jaringan Komputer 2024
 > Dosen: Hamonangan Situmorang, S.T. M.T.
 
 # About
