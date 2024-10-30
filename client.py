@@ -3,7 +3,7 @@ import threading
 import csv
 import os
 
-# --------------- READ DATA USER -----------------
+# ----------------- READ DATA USER -----------------
 def load_users(filename='users.csv'):
     users = {}
     if os.path.exists(filename):
@@ -15,17 +15,17 @@ def load_users(filename='users.csv'):
                 users[username] = password
     return users
 
-# ---------------- SAVE DATA USER ------------------
+# ----------------- SAVE DATA USER -----------------
 def save_user(username, password, filename='users.csv'):
     with open(filename, mode='a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([username, password])
 
-# KIRIM PERAN KE SERVER
+# --------------- FUNGSI KIRIM PESAN -----------------
 def send_message():
     while True:
         try:
-            data = input()  #pesan dari user
+            data = input()  # Input pesan dari user
             if data.lower() == "logout":
                 logout()
                 break
@@ -36,7 +36,7 @@ def send_message():
             logout()
             break
 
-# TERIMA PESAN DARI SERVER
+# ------------- FUNGSI TERIMA PESAN ----------------
 def receive_message():
     while True:
         try:
@@ -47,93 +47,104 @@ def receive_message():
             print(f"LOG: Error - {e}")
             break
 
-# LOGOUT
+# ----------------- FUNGSI LOGOUT ------------------
 def logout():
     logout_message = f"LOGOUT:{username}"
     client_socket.sendto(logout_message.encode(), (server_ip, server_port))
-    print("Keluar dari chat.")
-    client_socket.close()
-    os._exit(0)
+    print(f"{username} berhasil logout. Kembali ke menu utama.\n")
 
-# Input server IP, Port, dan Password untuk masuk ke server
+# ------------- FUNGSI AUTENTIKASI SERVER ----------
+def authenticate_server():
+    while True:
+        password = input("Masukkan password chatroom: ").strip()
+        auth_message = f"AUTH:{password}"
+        client_socket.sendto(auth_message.encode(), (server_ip, server_port))
+
+        response, _ = client_socket.recvfrom(1024)
+        if response.decode() == "AUTH_SUCCESS":
+            print("Berhasil terhubung ke server!")
+            return True  
+        else:
+            print("Password salah, coba lagi.")
+
+# --------------- FUNGSI MENU UTAMA ----------------
+def main_menu():
+    global username  # Untuk digunakan di seluruh fungsi
+
+    while True:
+        print("\n======== MENU =========")
+        print("1. Login\n2. Register\n3. Exit")
+        action = input(">> Pilih opsi: ").strip()
+
+        if action == '1':
+            print("\n======== LOGIN =========")
+            username = input("Username: ").strip()
+            password = input("Password: ").strip()
+
+            if username not in users:
+                print("Username belum terdaftar. Silakan register.")
+                continue
+
+            if users[username] != password:
+                print("Password salah. Coba lagi.")
+                continue
+
+            # Kirim pesan login ke server
+            login_message = f"LOGIN:{username}"
+            client_socket.sendto(login_message.encode(), (server_ip, server_port))
+
+            response, _ = client_socket.recvfrom(1024)
+            if response.decode() == "Login berhasil.":
+                print(f"\n======================== {username} IS LOGGED IN ============================")
+                print(f"Selamat datang! Silakan ketik 'logout' jika ingin meninggalkan percakapan.")
+                print("\n>> Mulai mengirim pesan:")
+                break  
+            else:
+                print(response.decode())
+
+        elif action == '2':
+                print("\n======== REGISTER =========")
+                new_username = input("Username baru: ").strip()
+                new_password = input("Password baru: ").strip()
+
+                if not new_username or not new_password:
+                    print("Username dan password tidak boleh kosong.")
+                    continue
+
+                if new_username in users:
+                    print("Username sudah terdaftar. Gunakan username lain.")
+                else:
+                    save_user(new_username, new_password)
+                    print("Registrasi berhasil! Silakan login.")
+                    users[new_username] = new_password
+                    break
+
+        elif action == '3':
+            print("Terima kasih telah menggunakan layanan kami. Sampai jumpa!")
+            os._exit(0)
+
+        else:
+            print("Pilihan tidak valid. Coba lagi.")
+
+# -------------- INISIASI KONEKSI ------------------
 server_ip = input("Masukkan IP Server: ").strip()
 server_port = int(input("Masukkan Port Server: ").strip())
 
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-while True:
-    password = input("Masukkan password chatroom: ").strip()
-    auth_message = f"AUTH:{password}"
-    client_socket.sendto(auth_message.encode(), (server_ip, server_port))
+# -------------- MUAT DATA USER --------------------
+users = load_users()
 
-    response, _ = client_socket.recvfrom(1024)
-    if response.decode() == "AUTH_SUCCESS":
-        print("Berhasil terhubung ke server!")
-        break
-    else:
-        print("Password salah, coba lagi.")
+# ----------------- AUTENTIKASI --------------------
+if authenticate_server():  
+    main_menu()
 
-users = load_users() 
+    # Mulai thread untuk mengirim dan menerima pesan
+    send_thread = threading.Thread(target=send_message)
+    receive_thread = threading.Thread(target=receive_message)
 
-# ----------------- MENU UTAMA ------------------
-while True:
-    print("\n============= MENU ==============")
-    print("1. Login\n2. Register\n3. Ketik 'exit' untuk keluar\n")
-    action = input(">> Pilih opsi: ").strip()
+    send_thread.start()
+    receive_thread.start()
 
-    if action == '1': #LOGIN
-        username = input("Username: ").strip()
-        password = input("Password: ").strip()
-
-        if not username or not password:
-            print("Username dan password tidak boleh kosong. Coba lagi!")
-            continue
-
-        if username not in users or users[username] != password:
-            print("Username atau password salah. Coba lagi!")
-            continue
-
-        # Kirim pesan login ke server
-        login_message = f"LOGIN:{username}"
-        client_socket.sendto(login_message.encode(), (server_ip, server_port))
-
-        response, _ = client_socket.recvfrom(1024)
-        if response.decode() == "Login berhasil.":
-            print("\nBerhasil login! Silakan ketik 'logout' jika ingin meninggalkan percakapan.")
-            print(">> Mulai mengirim pesan:\n")
-            break
-        else:
-            print(response.decode())
-
-    elif action == '2': #REGISTER
-            username = input("Username baru: ").strip()
-            password = input("Password baru: ").strip()
-
-            if not username or not password:
-                print("Username dan password tidak boleh kosong.")
-                continue
-
-            if username in users:
-                print("Username sudah terdaftar. Gunakan username lain.")
-            else:
-                save_user(username, password)
-                print("Registrasi berhasil! Silakan login.")
-                users[username] = password
-                break
-
-    elif action.lower == 'exit':
-        print("Terima kasih sudah mencoba layanan kami. Sampai jumpa!")
-        exit()
-
-    else:
-        print("Pilihan tidak valid.")
-
-# Mulai thread untuk mengirim dan menerima pesan
-send_thread = threading.Thread(target=send_message)
-receive_thread = threading.Thread(target=receive_message)
-
-send_thread.start()
-receive_thread.start()
-
-send_thread.join()
-receive_thread.join()
+    send_thread.join()
+    receive_thread.join()
