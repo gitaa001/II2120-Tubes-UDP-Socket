@@ -15,5 +15,5 @@ Program ini berisi fungsi Server dan Client yang menjalankan fungsi masing-masin
 1. Cek ipaddress dengan melakukan "ipconfig" pada terminal.
 2. Jalankan server dengan memanggil "python server.py" pada terminal. Input ipaddress yang sesuai dengan ip device server, input port (sembarang).
 3. Jalankan client.py dengan memanggil "python client.py" pada terminal. Input ipaddress dan port yang sama dengan server.
-4. Input password khusus chatroom yang telah di-set secara hardcore di "server.py".
+4. Input password khusus chatroom yang telah di-set secara hardcode di "server.py".
 Selamat mencoba!
