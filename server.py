@@ -1,78 +1,68 @@
 import socket
 
-# Setup password server dan storage untuk client login dan active user
 server_password = "ampunbang"
 clients = {}  # Key: clientAddress, Value: username
-active_users = []  # Array untuk menyimpan active user
+active_users = []  # Array active user
 
-# ---------------- Fungsi Kirim Pesan ke Semua Client ---------------------
 def broadcast_message(data, exclude_client=None):
+    """Broadcast message to all clients except the one who sent it."""
     for client in clients.keys():
-        if client != exclude_client:  # Cek agar pesan tidak terkirim ke pengirim
+        if client != exclude_client:  # Check if not the sender
             serverSocket.sendto(data.encode(), client)
 
-# Minta IP Address dan Port dari user
 IpAddress = input("Masukkan IP Address: ").strip()
 portServer = int(input("Masukkan Port Number: ").strip())
 
-# Buat socket server dan bind ke IP dan Port
 serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 serverSocket.bind((IpAddress, portServer)) 
 
 print(f"Chatroom server running on {IpAddress}:{portServer}...")
 
-# ---------------- Terima dan Tangani Pesan dari Client ------------------
+# -------------- TERIMA PESAN DARI CLIENT ------------------
 while True:
     data, clientAddress = serverSocket.recvfrom(1024)
     message = data.decode()
 
-    # Proses Autentikasi Server
+    # Proses login dengan autentikasi password server
     if message.startswith("AUTH:"):
         _, password = message.split(":", 1)
         if password == server_password:
             serverSocket.sendto("AUTH_SUCCESS".encode(), clientAddress)
         else:
             serverSocket.sendto("AUTH_FAILED".encode(), clientAddress)
-            continue  # Lanjut ke iterasi berikutnya tanpa memberikan akses lebih lanjut
+            continue
 
-    # Proses Login
     elif message.startswith("LOGIN:"):
         _, username = message.split(":", 1)
 
-        # Cek jika username sudah aktif di active_users
         if username in active_users:
             serverSocket.sendto("ERROR: Username sudah digunakan.".encode(), clientAddress)
         else:
-            # Tambahkan pengguna baru ke daftar clients dan active_users
             clients[clientAddress] = username
             active_users.append(username)
 
-            # Notifikasi ke semua pengguna tentang pengguna yang baru bergabung
+            # Notifikasi login
             login_notification = f"[SERVER]: {username} telah bergabung ke roomchat."
-            broadcast_message(login_notification, exclude_client=clientAddress)
+            broadcast_message(login_notification, exclude_client=clientAddress)  # Exclude the new user from receiving their own login message
 
-            # Kirim respons sukses login ke pengguna
             serverSocket.sendto("Login berhasil.".encode(), clientAddress)
             print(f"New client joined: {username} ({clientAddress})")
 
-    # Proses Logout
-    elif message.startswith("LOGOUT:"):
+    elif message.startswith("LOGOUT:"):  # CLIENT LOGOUT
         _, username = message.split(":", 1)
 
-        # Hapus informasi client dari daftar active users dan clients
-        if clientAddress in clients and username in active_users:
+        if clientAddress in clients:
             print(f"{username} has left the chat. ({clientAddress})")
             del clients[clientAddress]
             active_users.remove(username)
 
-            # Kirim notifikasi ke semua pengguna bahwa client telah keluar
             logout_notification = f"[SERVER]: {username} telah keluar dari chatroom."
-            broadcast_message(logout_notification)
+            broadcast_message(logout_notification)  
 
-    # Teruskan Pesan ke Semua Pengguna jika bukan perintah khusus
-    elif message and clientAddress in clients:
+    elif message and clientAddress in clients:  # Teruskan pesan
         username = clients.get(clientAddress, "Unknown")
-        broadcast_message(f"{username}: {message}")
+        # Broadcast the message excluding the sender
+        broadcast_message(f"{username}: {message}", exclude_client=clientAddress)
 
         # Log pesan di server
         print(f"LOG: {username} ({clientAddress}): {message}")
